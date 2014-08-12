@@ -32,6 +32,7 @@ CLOUDFRONT_OPTIONS = [
 ]
 
 
+@mock.patch.object(driver, 'CLOUDFRONT_OPTIONS', new=CLOUDFRONT_OPTIONS)
 class TestDriver(base.TestCase):
 
     def setUp(self):
@@ -40,7 +41,6 @@ class TestDriver(base.TestCase):
         self.conf = cfg.ConfigOpts()
 
     @mock.patch('boto.connect_cloudfront')
-    @mock.patch.object(driver, 'CLOUDFRONT_OPTIONS', new=CLOUDFRONT_OPTIONS)
     def test_init(self, mock_connect):
         provider = driver.CDNProvider(self.conf)
         mock_connect.assert_called_once_with(
@@ -49,19 +49,16 @@ class TestDriver(base.TestCase):
             aws_secret_access_key=provider._conf[
                 'drivers:provider:cloudfront'].aws_secret_access_key)
 
-    @mock.patch.object(driver, 'CLOUDFRONT_OPTIONS', new=CLOUDFRONT_OPTIONS)
     def test_provider_name(self):
         provider = driver.CDNProvider(self.conf)
         self.assertEqual(provider.provider_name, "CloudFront")
 
-    @mock.patch.object(driver, 'CLOUDFRONT_OPTIONS', new=CLOUDFRONT_OPTIONS)
     def test_is_alive(self):
         provider = driver.CDNProvider(self.conf)
         self.assertEqual(provider.is_alive(), True)
 
     @mock.patch.object(boto.cloudfront, 'CloudFrontConnection')
     @mock.patch('boto.connect_cloudfront')
-    @mock.patch.object(driver, 'CLOUDFRONT_OPTIONS', new=CLOUDFRONT_OPTIONS)
     def test_get_client(self, MockConnection, mock_connect):
         mock_connect.return_value = MockConnection(None, None)
         provider = driver.CDNProvider(self.conf)
@@ -69,7 +66,6 @@ class TestDriver(base.TestCase):
         self.assertNotEquals(client, None)
 
     @mock.patch('poppy.provider.cloudfront.controllers.ServiceController')
-    @mock.patch.object(driver, 'CLOUDFRONT_OPTIONS', new=CLOUDFRONT_OPTIONS)
     def test_service_controller(self, MockController):
         provider = driver.CDNProvider(self.conf)
         self.assertNotEquals(provider.service_controller, None)

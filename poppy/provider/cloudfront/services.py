@@ -56,6 +56,7 @@ class ServiceController(base.ServiceBase):
         return self.responder.created(distributions)
 
     def delete(self, distribution_id):
+        # NOTE(obulpathi): distribution_id is the equivalent of service_name
         try:
             self.client.delete_distribution(distribution_id)
 

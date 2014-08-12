@@ -27,72 +27,52 @@ class TestServices(base.TestCase):
 
     @mock.patch('poppy.provider.cloudfront.services.ServiceController.client')
     @mock.patch('poppy.provider.cloudfront.driver.CDNProvider')
+    def setUp(self, mock_get_client, MockDriver):
+        super(TestServices, self).setUp()
+
+        self.service_name = 'myservice'
+        self.mock_get_client = mock_get_client
+        self.driver = MockDriver()
+        self.controller = services.ServiceController(self.driver)
+
     @ddt.file_data('data_service.json')
-    def test_create(self, service_json, mock_get_client, mock_driver):
-        service_name = 'myservice'
-        driver = mock_driver()
-
-        # instantiate
-        controller = services.ServiceController(driver)
-
-        # ASSERTIONS
+    def test_create_server_error(self, service_json):
         # create_distribution: CloudFrontServerError
-        controller.client.create_distribution.side_effect = \
+        self.controller.client.create_distribution.side_effect = \
             cloudfront.exception.CloudFrontServerError(
                 503, "Service Unavailable")
-        resp = controller.create(service_name, service_json)
-        self.assertIn('error', resp[driver.provider_name])
+        resp = self.controller.create(self.service_name, service_json)
+        self.assertIn('error', resp[self.driver.provider_name])
 
-        controller.client.reset_mock()
-        controller.client.create_distribution.side_effect = None
-
-        # generic exception: Exception
-        controller.client.create_distribution.side_effect = \
-            Exception('Creating service failed.')
-        resp = controller.create(service_name, service_json)
-        self.assertIn('error', resp[driver.provider_name])
-
-        controller.client.reset_mock()
-        controller.client.create_distribution.side_effect = None
-
-        # finally, a clear run
-        resp = controller.create(service_name, service_json)
-        self.assertIn('domain', resp[driver.provider_name])
-
-    @mock.patch('poppy.provider.cloudfront.services.ServiceController.client')
-    @mock.patch('poppy.provider.cloudfront.driver.CDNProvider')
     @ddt.file_data('data_service.json')
-    def test_update(self, mock_get_client, mock_driver, service_json):
-        service_name = 'myservice'
+    def test_create_exception(self, service_json):
+        # generic exception: Exception
+        self.controller.client.create_distribution.side_effect = \
+            Exception('Creating service failed.')
+        resp = self.controller.create(self.service_name, service_json)
+        self.assertIn('error', resp[self.driver.provider_name])
 
-        driver = mock_driver()
-        controller = services.ServiceController(driver)
-        resp = controller.update(service_name, service_json)
+    @ddt.file_data('data_service.json')
+    def test_create(self, service_json):
+        # clear run
+        resp = self.controller.create(self.service_name, service_json)
+        self.assertIn('domain', resp[self.driver.provider_name])
+
+    @ddt.file_data('data_service.json')
+    def test_update(self, service_json):
+        resp = self.controller.update(self.service_name, service_json)
         self.assertEquals('updated services', resp)
 
-    @mock.patch('poppy.provider.cloudfront.driver.CDNProvider')
-    def test_delete(self, mock_driver):
-        service_name = 'myservice'
-        driver = mock_driver()
-
-        # instantiate
-        controller = services.ServiceController(driver)
-
+    def test_delete_exceptions(self):
         # delete_distribution: Exception
-        controller.client.delete_distribution.side_effect = \
+        self.controller.client.delete_distribution.side_effect = \
             Exception('Creating service failed.')
-        resp = controller.delete(service_name)
-        self.assertIn('error', resp[driver.provider_name])
+        resp = self.controller.delete(self.service_name)
+        self.assertIn('error', resp[self.driver.provider_name])
 
-        controller.client.reset_mock()
-        controller.client.delete_distribution.side_effect = None
+    def test_delete(self):
+        resp = self.controller.delete(self.service_name)
+        self.assertIn('domain', resp[self.driver.provider_name])
 
-        # delete_distribution: Clear run
-        resp = controller.delete(service_name)
-        self.assertIn('domain', resp[driver.provider_name])
-
-    @mock.patch('poppy.provider.cloudfront.driver.CDNProvider')
-    def test_client(self, MockDriver):
-        driver = MockDriver()
-        controller = services.ServiceController(driver)
-        self.assertNotEquals(controller.client(), None)
+    def test_client(self):
+        self.assertNotEquals(self.controller.client(), None)
